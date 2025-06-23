@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Controle de Escalas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-black text-white">
+    <header class="bg-gray-800 text-white p-4">
+      <h1 class="text-xl text-center select-none">Controle de Escalas</h1>
+    </header>
+    <div class="flex items-center justify-center min-h-screen">
+      <div class="bg-gray-900 p-6 rounded shadow-lg max-w-md w-full">
+        <h2 class="text-2xl font-semibold mb-4 text-center select-none">Login</h2>
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium select-none">Email</label>
+            <input
+              type="email"
+              id="email"
+              required
+              class="w-full bg-gray-800 text-white p-2 rounded border border-gray-700 focus:outline-none focus:border-blue-500"
+            />
+            <p id="emailError" class="text-red-500 text-sm mt-1 hidden">Por favor, insira um e-mail válido (ex.: @gmail.com, @hotmail.com, @yahoo.com, @outlook.com).</p>
+          </div>
+          <div class="relative">
+            <label for="password" class="block text-sm font-medium select-none">Senha</label>
+            <input
+              type="password"
+              id="password"
+              required
+              class="w-full bg-gray-800 text-white p-2 rounded border border-gray-700 focus:outline-none focus:border-blue-500 pr-10"
+            />
+            <span
+              id="togglePassword"
+              class="absolute right-2 top-10 transform -translate-y-1/2 cursor-pointer text-gray-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+          </div>
+          <button
+            type="submit"
+            id="submitBtn"
+            disabled
+            class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded select-none disabled:opacity-50 disabled:cursor-not-allowed"
+            oncopy="return false;"
+          >
+            Entrar
+          </button>
+          <p id="rateLimitMessage" class="text-red-500 text-sm mt-1 hidden"></p>
+          <a
+            href="register.html"
+            class="block text-center text-blue-400 hover:underline select-none"
+            oncopy="return false;"
+            >Criar conta</a
+          >
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Função para iniciar o contador de bloqueio
+      function startCountdown(seconds) {
+        const messageElement = document.getElementById('rateLimitMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        messageElement.textContent = `Muitas tentativas de login. Tente novamente em ${seconds} segundos.`;
+        messageElement.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        // Salvar o tempo de expiração no localStorage
+        const expiryTime = Date.now() + seconds * 1000;
+        localStorage.setItem('loginLockoutExpiry', expiryTime);
+
+        const interval = setInterval(() => {
+          seconds--;
+          if (seconds <= 0) {
+            clearInterval(interval);
+            messageElement.classList.add('hidden');
+            submitBtn.disabled = false;
+            localStorage.removeItem('loginLockoutExpiry');
+          } else {
+            messageElement.textContent = `Muitas tentativas de login. Tente novamente em ${seconds} segundos.`;
+            localStorage.setItem('loginLockoutExpiry', Date.now() + seconds * 1000);
+          }
+        }, 1000);
+      }
+
+      // Verificar se há um bloqueio ativo ao carregar a página
+      document.addEventListener('DOMContentLoaded', () => {
+        const expiryTime = localStorage.getItem('loginLockoutExpiry');
+        if (expiryTime && Date.now() < expiryTime) {
+          const remainingSeconds = Math.ceil((expiryTime - Date.now()) / 1000);
+          startCountdown(remainingSeconds);
+        }
+      });
+
+      // Lógica de login
+      document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        try {
+          const response = await fetch("http://localhost:3000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.removeItem('loginLockoutExpiry'); // Limpar bloqueio ao logar com sucesso
+            window.location.href = "index.html";
+          } else if (response.status === 429) {
+            const retryAfter = data.retryAfter || 900; // 15 minutos como fallback
+            startCountdown(retryAfter);
+          } else {
+            alert(data.error);
+          }
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao fazer login. Verifique o servidor.");
+        }
+      });
+
+      // Lógica para alternar visibilidade da senha
+      const togglePassword = document.getElementById('togglePassword');
+      const passwordInput = document.getElementById('password');
+
+      togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        togglePassword.innerHTML = type === 'password' ?
+          `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>` :
+          `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+      });
+
+      // Bloquear cópia nos elementos específicos
+      document.querySelectorAll('.select-none').forEach(element => {
+        element.addEventListener('copy', (e) => {
+          e.preventDefault();
+          return false;
+        });
+      });
+
+      // Validação de e-mail
+      const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('emailError');
+      const submitBtn = document.getElementById('submitBtn');
+
+      emailInput.addEventListener('blur', () => {
+        const email = emailInput.value;
+        const emailRegex = /^[^\s@]+@(gmail\.com|hotmail\.com|yahoo\.com|outlook\.com)$/i;
+        if (!emailRegex.test(email)) {
+          emailInput.classList.remove('border-gray-700', 'focus:border-blue-500');
+          emailInput.classList.add('border-red-500');
+          emailError.classList.remove('hidden');
+          submitBtn.disabled = true;
+        } else {
+          emailInput.classList.remove('border-red-500');
+          emailInput.classList.add('border-gray-700', 'focus:border-blue-500');
+          emailError.classList.add('hidden');
+          submitBtn.disabled = localStorage.getItem('loginLockoutExpiry') && Date.now() < localStorage.getItem('loginLockoutExpiry');
+        }
+      });
+    </script>
+  </body>
+</html>

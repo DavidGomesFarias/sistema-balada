@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controle de Escalas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+      }
+      #modal {
+        overflow: hidden;
+      }
+      .text-lg {
+        display: flex;
+        margin-top: 5px;
+      }
+      .text-lg p {
+        text-align: end;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .text-lg p:nth-child(2) {
+        padding: 0px 30px;
+      }
+      .weekday-header {
+        text-align: center;
+        font-weight: bold;
+        color: #ffffff;
+        padding: 8px;
+        background-color: #1f2937; /* bg-gray-800 */
+      }
+
+      /* Hover para os dias do calendário */
+      #calendario button:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra sutil */
+      }
+      #calendario button.bg-gray-700:hover {
+        background-color: #4b5563; /* bg-gray-600 */
+      }
+      #calendario button.bg-blue-500:hover {
+        background-color: #2563eb; /* bg-blue-600 */
+      }
+      #calendario button.bg-green-500:hover {
+        background-color: #16a34a; /* bg-green-600 */
+      }
+      #calendario button.bg-red-500:hover {
+        background-color: #dc2626; /* bg-red-600 */
+      }
+
+      /* Hover para o botão Sair */
+      #logoutBtn {
+        transition: all 0.2s ease-in-out;
+      }
+      #logoutBtn:hover {
+        background-color: #dc2626; /* bg-red-600 */
+        transform: translateY(-2px); /* Leve elevação */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra para profundidade */
+      }
+    </style>
+  </head>
+  <body class="bg-black text-white">
+    <header
+      class="bg-gray-800 text-white p-4 flex justify-between items-center"
+    >
+      <h1 class="text-xl">Controle de Escalas</h1>
+      <div>
+        <span id="userName" class="mr-4">Bem-vindo, Usuário</span>
+        <button id="logoutBtn" class="bg-red-500 px-4 py-2 rounded">
+          Sair
+        </button>
+      </div>
+    </header>
+    <div class="container mx-auto p-4">
+      <h1 class="text-3xl font-semibold mb-4 text-center">
+        Controle de Escalas
+      </h1>
+
+      <!-- Seleção de Mês -->
+      <div class="flex flex-wrap justify-center gap-2 mb-4">
+        <button
+          data-month="0"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Janeiro
+        </button>
+        <button
+          data-month="1"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Fevereiro
+        </button>
+        <button
+          data-month="2"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Março
+        </button>
+        <button
+          data-month="3"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Abril
+        </button>
+        <button
+          data-month="4"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Maio
+        </button>
+        <button
+          data-month="5"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Junho
+        </button>
+        <button
+          data-month="6"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Julho
+        </button>
+        <button
+          data-month="7"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Agosto
+        </button>
+        <button
+          data-month="8"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Setembro
+        </button>
+        <button
+          data-month="9"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Outubro
+        </button>
+        <button
+          data-month="10"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Novembro
+        </button>
+        <button
+          data-month="11"
+          class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        >
+          Dezembro
+        </button>
+      </div>
+
+      <!-- Calendário -->
+      <div id="calendario" class="grid grid-cols-7 gap-2 mb-8"></div>
+
+      <!-- Valores -->
+      <div class="bg-gray-900 p-6 rounded shadow space-y-2">
+        <p>
+          <span id="escalasCount" class="text-white">Escalado: 0</span> | Valor
+          Estimado para Receber:
+          <span id="valorEstimado" class="text-yellow-400">0</span> reais
+        </p>
+        <p>
+          <span id="baladasCount" class="text-white"
+            >Baladas Concluídas: 0</span
+          >
+          | Valor Real para Receber:
+          <span id="valorReal" class="text-green-400">0</span> reais
+        </p>
+      </div>
+
+      <!-- Legenda -->
+      <div class="text-center mb-4 text-lg dp-flex">
+        <p>
+          Escalado <span class="inline-block w-4 h-4 bg-blue-500 ml-2"></span>
+        </p>
+        <p>
+          Presença <span class="inline-block w-4 h-4 bg-green-500 ml-2"></span>
+        </p>
+        <p>Falta <span class="inline-block w-4 h-4 bg-red-500 ml-2"></span></p>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="modal"
+      class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center"
+    >
+      <div
+        class="bg-gray-900 p-6 rounded shadow-lg max-w-md w-full text-white text-center"
+      >
+        <h2 id="modalTitle" class="text-xl font-semibold mb-4"></h2>
+        <div id="modalContent" class="space-y-4"></div>
+        <button
+          id="modalClose"
+          class="mt-6 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded w-32 mx-auto"
+        >
+          Fechar
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="userModal"
+      class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center"
+    >
+      <div class="bg-gray-900 p-6 rounded shadow-lg max-w-md w-full text-white">
+        <h2 class="text-xl font-semibold mb-4 text-center">Dados Pessoais</h2>
+        <div class="space-y-4">
+          <div>
+            <label for="modalName" class="block text-sm font-medium mb-1"
+              >Nome</label
+            >
+            <input
+              type="text"
+              id="modalName"
+              class="bg-gray-800 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled
+            />
+          </div>
+          <div>
+            <label for="modalEmail" class="block text-sm font-medium mb-1"
+              >Email</label
+            >
+            <input
+              type="email"
+              id="modalEmail"
+              class="bg-gray-800 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled
+            />
+          </div>
+          <div>
+            <label for="modalCpf" class="block text-sm font-medium mb-1"
+              >CPF</label
+            >
+            <input
+              type="text"
+              id="modalCpf"
+              class="bg-gray-800 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled
+            />
+          </div>
+        </div>
+        <button
+          id="closeUserModal"
+          class="mt-6 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded w-32 mx-auto block"
+        >
+          Fechar
+        </button>
+      </div>
+    </div>
+
+    <!-- Botão Flutuante -->
+    <button id="openUserModal" class="floating-btn fixed bottom-4 right-4 bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center group">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform transition-transform duration-500 group-hover:-rotate-360">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+    <span class="absolute right-14 bg-blue-500 text-white px-2 py-1 rounded opacity-0 transform translate-x-4 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">Dados Pessoais</span>
+</button>
+
+    <script>
+      const calendario = document.getElementById("calendario");
+      const modal = document.getElementById("modal");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalContent = document.getElementById("modalContent");
+      const modalClose = document.getElementById("modalClose");
+      const valorEstimado = document.getElementById("valorEstimado");
+      const valorReal = document.getElementById("valorReal");
+      const escalasCount = document.getElementById("escalasCount");
+      const baladasCount = document.getElementById("baladasCount");
+      const monthButtons = document.querySelectorAll(".month-btn");
+      const userName = document.getElementById("userName");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      let currentDate = new Date();
+      let escalas = [];
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      // Formata data para DD/MM/AAAA
+      function formatDateBR(dateStr) {
+        const [year, month, day] = dateStr.split("-");
+        return `${day}/${month}/${year}`;
+      }
+
+      // Carrega escalas do backend
+      async function loadEscalas() {
+        try {
+          const response = await fetch(
+            `http://localhost:3000/escalas?user_id=${user.id}`
+          );
+          if (!response.ok) throw new Error("Erro ao carregar escalas");
+          escalas = await response.json();
+          console.log("Escalas atualizadas:", escalas);
+          renderCalendario();
+          updateValores();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao carregar escalas. Verifique o servidor.");
+        }
+      }
+
+      // Gera o calendário
+      function renderCalendario() {
+        calendario.innerHTML = "";
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Adiciona cabeçalho com iniciais dos dias da semana
+        const weekdays = ["D", "S", "T", "Q", "Q", "S", "S"];
+        weekdays.forEach((day) => {
+          calendario.innerHTML += `<div class="weekday-header rounded">${day}</div>`;
+        });
+
+        monthButtons.forEach((btn) => {
+          btn.classList.toggle(
+            "bg-purple-500",
+            parseInt(btn.dataset.month) === month
+          );
+          btn.classList.toggle(
+            "bg-gray-800",
+            parseInt(btn.dataset.month) !== month
+          );
+        });
+
+        for (let i = 0; i < firstDay; i++) {
+          calendario.innerHTML += "<div></div>";
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateStr = `${year}-${String(month + 1).padStart(
+            2,
+            "0"
+          )}-${String(day).padStart(2, "0")}`;
+          const escala = escalas.find((e) => e.data === dateStr);
+          console.log(`Dia ${dateStr}:`, escala);
+          let bgColor = "bg-gray-700";
+          let extraClass = "";
+          let buttonContent = day;
+          if (escala) {
+            if (escala.status === "escalado") {
+              bgColor = "bg-blue-500 text-white";
+            } else if (escala.status === "foi") {
+              bgColor = "bg-green-500 text-white";
+            } else if (escala.status === "faltou") {
+              bgColor = "bg-red-500 text-white";
+              buttonContent = day;
+            }
+          }
+          calendario.innerHTML += `
+          <button class="p-4 rounded ${bgColor} ${extraClass}" data-date="${dateStr}">${buttonContent}</button>
+      `;
+        }
+
+        // Remova listeners antigos e adicione novos
+        const buttons = document.querySelectorAll("#calendario button");
+        buttons.forEach((btn) => {
+          btn.removeEventListener("click", handleDayClick);
+          btn.addEventListener("click", handleDayClick);
+        });
+      }
+
+      // Lida com clique nos dias
+      async function handleDayClick(e) {
+        const date = e.target.dataset.date;
+        const escala = escalas.find((e) => e.data === date);
+
+        if (!escala) {
+          showModal(
+            "Escalado?",
+            `
+          <p class="text-lg">Você está escalado no dia ${formatDateBR(
+            date
+          )}?</p>
+          <div class="flex justify-center gap-4">
+            <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-24" onclick="saveEscala('${date}', 'escalado')">Sim</button>
+            <button class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded w-24" onclick="closeModal()">Não</button>
+          </div>
+        `
+          );
+        } else if (escala.status === "escalado") {
+          showModal(
+            "Foi à balada?",
+            `
+          <p class="text-lg">Você foi à balada no dia ${formatDateBR(date)}?</p>
+          <div class="flex justify-center gap-4">
+            <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-24" onclick="askForPhoto('${
+              escala.id
+            }')">Sim</button>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-24" onclick="markAsFaltou('${
+              escala.id
+            }')">Não</button>
+          </div>
+          <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-32 mt-4" onclick="deleteEscala('${
+            escala.id
+          }')">Apagar</button>
+        `
+          );
+        } else if (escala.status === "foi") {
+          const content = escala.foto_path
+            ? `<div class="max-h-[300px] overflow-y-auto"><img src="/${escala.foto_path}" alt="Foto da escala" class="max-w-full rounded mx-auto"></div>`
+            : `
+            <p class="text-lg">Nenhuma foto anexada.</p>
+            <input type="file" id="fotoInput" accept="image/*" class="mb-4 bg-gray-800 text-white p-2 rounded mx-auto">
+            <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-32" onclick="uploadPhoto('${escala.id}', event)">Anexar Foto</button>
+          `;
+          showModal(
+            "Foto da Escala",
+            `
+          ${content}
+          <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-32 mt-4" onclick="deleteEscala('${escala.id}')">Apagar</button>
+        `
+          );
+        } else if (escala.status === "faltou") {
+          showModal(
+            "Dia Marcado como Falta",
+            `
+          <p class="text-lg">Você marcou que faltou no dia ${formatDateBR(
+            date
+          )}?</p>
+          <div class="flex justify-center gap-4">
+            <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-24" onclick="askForPhoto('${
+              escala.id
+            }')">Fui</button>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-32" onclick="deleteEscala('${
+              escala.id
+            }')">Apagar</button>
+          </div>
+        `
+          );
+        }
+      }
+
+      // Mostra o modal
+      function showModal(title, content) {
+        modalTitle.textContent = title;
+        modalContent.innerHTML = content;
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+      }
+
+      // Fecha o modal
+      function closeModal() {
+        modal.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden");
+      }
+
+      // Salva nova escala
+      async function saveEscala(date, status) {
+        try {
+          const response = await fetch("http://localhost:3000/escalas", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: date, status, user_id: user.id }),
+          });
+          if (!response.ok) throw new Error("Erro ao salvar escala");
+          closeModal();
+          // Atualize o currentDate para o mês da data salva
+          const [year, month] = date.split("-").map(Number);
+          currentDate = new Date(year, month - 1, 1);
+          await loadEscalas();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao salvar escala. Verifique o servidor.");
+        }
+      }
+
+      // Marca como faltou
+      async function markAsFaltou(id) {
+        try {
+          const response = await fetch(`http://localhost:3000/escalas/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "faltou", user_id: user.id }),
+          });
+          if (!response.ok) throw new Error("Erro ao marcar como faltou");
+          closeModal();
+          await loadEscalas();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao marcar como faltou. Verifique o servidor.");
+        }
+      }
+
+      // Pede foto
+      function askForPhoto(id) {
+        showModal(
+          "Upload da Foto",
+          `
+        <div class="space-y-4">
+          <input type="file" id="fotoInput" accept="image/*" class="mb-4 bg-gray-800 text-white p-2 rounded mx-auto">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-32" onclick="uploadPhoto('${id}', event)">Enviar</button>
+        </div>
+      `
+        );
+      }
+
+      // Faz upload da foto
+      async function uploadPhoto(id, event) {
+        event.preventDefault();
+        const fileInput = document.getElementById("fotoInput");
+        if (!fileInput.files[0]) {
+          alert("Por favor, selecione uma foto.");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("foto", fileInput.files[0]);
+        formData.append("user_id", user.id);
+
+        try {
+          const uploadResponse = await fetch(
+            `http://localhost:3000/escalas/${id}/foto`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+          if (!uploadResponse.ok) throw new Error("Erro ao enviar foto");
+
+          const updateResponse = await fetch(
+            `http://localhost:3000/escalas/${id}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "foi", user_id: user.id }),
+            }
+          );
+          if (!updateResponse.ok) throw new Error("Erro ao atualizar status");
+
+          closeModal();
+          await loadEscalas();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao enviar foto. Verifique o servidor ou a conexão.");
+        }
+      }
+
+      // Faz upload da foto (para dias já marcados como "foi")
+      async function uploadGrpPhoto(id, event) {
+        event.preventDefault();
+        const fileInput = document.getElementById("fotoInput");
+        if (!fileInput.files[0]) {
+          alert("Por favor, selecione uma foto.");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("foto", fileInput.files[0]);
+        formData.append("user_id", user.id);
+
+        try {
+          const response = await fetch(
+            `http://localhost:3000/escalas/${id}/foto`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+          if (!response.ok) throw new Error("Erro ao enviar foto");
+          closeModal();
+          await loadEscalas();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao enviar foto. Verifique o servidor ou a conexão.");
+        }
+      }
+
+      // Exclui escala
+      async function deleteEscala(id) {
+        if (!confirm("Tem certeza que deseja excluir esta escala?")) return;
+        try {
+          const response = await fetch(
+            `http://localhost:3000/escalas/${id}?user_id=${user.id}`,
+            {
+              method: "DELETE",
+            }
+          );
+          if (!response.ok) throw new Error("Erro ao excluir escala");
+          closeModal();
+          await loadEscalas();
+        } catch (error) {
+          console.error("Erro:", error);
+          alert("Falha ao excluir escala. Verifique o servidor.");
+        }
+      }
+
+      // Atualiza valores estimados e reais para o mês atual
+      function updateValores() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const escalasDoMes = escalas.filter((e) => {
+          const [escalaYear, escalaMonth] = e.data.split("-").map(Number);
+          return escalaYear === year && escalaMonth === month;
+        });
+        const escalados = escalasDoMes.filter(
+          (e) => e.status === "escalado" || e.status === "foi"
+        ).length;
+        const confirmados = escalasDoMes.filter(
+          (e) => e.status === "foi"
+        ).length;
+        escalasCount.textContent = `Escalado: ${escalados}`;
+        baladasCount.textContent = `Baladas Concluídas: ${confirmados}`;
+        valorEstimado.textContent = (escalados * 150).toFixed(2);
+        valorReal.textContent = (confirmados * 150).toFixed(2);
+      }
+
+      // Event listeners para botões de mês
+      monthButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          currentDate.setMonth(parseInt(btn.dataset.month));
+          renderCalendario();
+          updateValores();
+        });
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user && user.name) {
+          const userNameElement = document.getElementById("userName");
+          if (userNameElement) {
+            userNameElement.textContent = user.name;
+          } else {
+            console.error('Elemento com id "userName" não encontrado no DOM');
+          }
+          // Presume que atualizarRelatorio está no script.js
+          if (typeof atualizarRelatorio === "function") {
+            atualizarRelatorio();
+          }
+          loadEscalas(); // Corrigido de fetchEscalas para loadEscalas
+        } else {
+          console.error(
+            "Usuário não encontrado no localStorage ou nome inválido"
+          );
+          window.location.href = "login.html";
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+          localStorage.removeItem("user");
+          window.location.href = "login.html";
+        });
+      });
+
+      // Fecha modal
+      modalClose.addEventListener("click", closeModal);
+    </script>
+    <script src="script.js"></script>
+  </body>
+</html>
