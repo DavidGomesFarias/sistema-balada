@@ -285,6 +285,8 @@
       let escalas = [];
       const user = JSON.parse(localStorage.getItem("user"));
 
+      const API_URL = window.location.origin;
+
       // Formata data para DD/MM/AAAA
       function formatDateBR(dateStr) {
         const [year, month, day] = dateStr.split("-");
@@ -295,7 +297,7 @@
       async function loadEscalas() {
         try {
           const response = await fetch(
-            `http://localhost:3000/escalas?user_id=${user.id}`
+            `${API_URL}/escalas?user_id=${user.id}`
           );
           if (!response.ok) throw new Error("Erro ao carregar escalas");
           escalas = await response.json();
@@ -458,7 +460,7 @@
       // Salva nova escala
       async function saveEscala(date, status) {
         try {
-          const response = await fetch("http://localhost:3000/escalas", {
+          const response = await fetch(`${API_URL}/escalas`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ data: date, status, user_id: user.id }),
@@ -478,7 +480,7 @@
       // Marca como faltou
       async function markAsFaltou(id) {
         try {
-          const response = await fetch(`http://localhost:3000/escalas/${id}`, {
+          const response = await fetch(`${API_URL}/escalas/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: "faltou", user_id: user.id }),
@@ -519,7 +521,7 @@
 
         try {
           const uploadResponse = await fetch(
-            `http://localhost:3000/escalas/${id}/foto`,
+            `${API_URL}/escalas/${id}/foto`,
             {
               method: "POST",
               body: formData,
@@ -528,7 +530,7 @@
           if (!uploadResponse.ok) throw new Error("Erro ao enviar foto");
 
           const updateResponse = await fetch(
-            `http://localhost:3000/escalas/${id}`,
+            `${API_URL}/escalas/${id}`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -559,7 +561,7 @@
 
         try {
           const response = await fetch(
-            `http://localhost:3000/escalas/${id}/foto`,
+            `${API_URL}/escalas/${id}/foto`,
             {
               method: "POST",
               body: formData,
@@ -579,7 +581,7 @@
         if (!confirm("Tem certeza que deseja excluir esta escala?")) return;
         try {
           const response = await fetch(
-            `http://localhost:3000/escalas/${id}?user_id=${user.id}`,
+            `${API_URL}/escalas/${id}?user_id=${user.id}`,
             {
               method: "DELETE",
             }
