@@ -172,6 +172,7 @@ if (openUserModal && userModal && closeUserModal) {
     openUserModal.addEventListener('click', async () => {
         const user = JSON.parse(localStorage.getItem('user'));
         const userId = user.id;
+        const API_BASE = window.location.origin;
         try {
             const response = await fetch(`${API_BASE}/user/${userId}`);
             const userData = await response.json();
