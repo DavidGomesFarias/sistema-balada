@@ -49,8 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const API_BASE = window.location.origin;
             try {
-                const response = await fetch('http://localhost:3000/login', {
+                const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -80,8 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const API_BASE = window.location.origin;
             try {
-                const response = await fetch('http://localhost:3000/register', {
+                const response = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -131,8 +133,9 @@ function togglePassword(inputId) {
 
 async function atualizarRelatorio() {
     const user = JSON.parse(localStorage.getItem('user'));
+    const API_BASE = window.location.origin;
     try {
-        const response = await fetch(`http://localhost:3000/escalas?user_id=${user.id}`);
+        const response = await fetch(`${API_BASE}/escalas?user_id=${user.id}`);
         const escalas = await response.json();
         if (response.ok) {
             let escaladoCount = 0;
@@ -170,7 +173,7 @@ if (openUserModal && userModal && closeUserModal) {
         const user = JSON.parse(localStorage.getItem('user'));
         const userId = user.id;
         try {
-            const response = await fetch(`http://localhost:3000/user/${userId}`);
+            const response = await fetch(`${API_BASE}/user/${userId}`);
             const userData = await response.json();
             if (response.ok) {
                 console.log('Dados do usuário:', userData); // Adiciona log para depuração
