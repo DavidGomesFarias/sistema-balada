@@ -1,24 +1,30 @@
 {
   "name": "sistema-balada",
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "",
+  "main": "db.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavidGomesFarias/sistema-balada.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "express-rate-limit": "^7.5.0",
-    "multer": "^1.4.5-lts.2",
-    "pg": "^8.18.0",
-    "sqlite3": "^5.0.2"
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DavidGomesFarias/sistema-balada/issues"
   },
-  "devDependencies": {
-    "tailwindcss": "^4.1.8"
+  "homepage": "https://github.com/DavidGomesFarias/sistema-balada#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "sqlite3": "^6.0.1"
   }
 }

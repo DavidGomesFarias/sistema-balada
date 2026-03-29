@@ -1,194 +1,240 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.name && window.location.pathname.includes('index.html')) {
-        const userNameElement = document.getElementById('userName');
-        if (userNameElement) {
-            userNameElement.textContent = user.name;
-        } else {
-            console.error('Elemento com id "userName" não encontrado no DOM');
-        }
-        if (typeof loadEscalas === 'function') {
-            loadEscalas();
-        }
-    } else if (!window.location.pathname.includes('login.html') && !window.location.pathname.includes('register.html')) {
-        console.error('Usuário não encontrado no localStorage ou nome inválido');
+    const API_BASE = window.location.origin;
+    const token = localStorage.getItem('token');
+
+    // 🔐 Proteção de rota
+    if (!token && window.location.pathname.includes('index.html')) {
         window.location.href = 'login.html';
+        return;
     }
 
-    function startCountdown(seconds) {
-        const messageElement = document.getElementById('rateLimitMessage');
-        if (!messageElement) {
-            console.error('Elemento rateLimitMessage não encontrado');
-            return;
-        }
-        messageElement.textContent = `Muitas tentativas de login. Tente novamente em ${seconds} segundos.`;
-        messageElement.classList.remove('hidden');
-
-        const submitBtn = document.getElementById('submitBtn');
-        if (!submitBtn) {
-            console.error('Elemento submitBtn não encontrado');
-            return;
-        }
-        submitBtn.disabled = true;
-
-        const interval = setInterval(() => {
-            seconds--;
-            if (seconds <= 0) {
-                clearInterval(interval);
-                messageElement.classList.add('hidden');
-                submitBtn.disabled = false;
-            } else {
-                messageElement.textContent = `Muitas tentativas de login. Tente novamente em ${seconds} segundos.`;
-            }
-        }, 1000);
-    }
-
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const API_BASE = window.location.origin;
-            try {
-                const response = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await response.json();
-                console.log('Resposta do servidor:', data); // Depuração
-                if (response.ok) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    window.location.href = 'index.html';
-                } else if (response.status === 429) {
-                    const retryAfter = data.retryAfter || 15 * 60; // Fallback se retryAfter não estiver presente
-                    startCountdown(retryAfter);
-                } else {
-                    alert(data.error);
-                }
-            } catch (err) {
-                console.error('Erro ao fazer login:', err);
-                alert('Erro ao fazer login');
+    // 🔧 Helper para requisições autenticadas
+    function authFetch(url, options = {}) {
+        return fetch(url, {
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
     }
 
+    // 🧠 Carregar dados iniciais
+    if (token && window.location.pathname.includes('index.html')) {
+        loadUser();
+        if (typeof loadEscalas === 'function') {
+            loadEscalas();
+        }
+    }
+
+    async function loadUser() {
+        try {
+            const response = await authFetch(`${API_BASE}/auth/user`);
+            const user = await response.json();
+
+            if (response.ok) {
+                const userNameElement = document.getElementById('userName');
+                if (userNameElement) {
+                    userNameElement.textContent = user.name;
+                }
+            } else {
+                logout();
+            }
+        } catch (err) {
+            console.error('Erro ao carregar usuário:', err);
+            logout();
+        }
+    }
+
+    // ⏱️ Rate limit
+    function startCountdown(seconds) {
+        const messageElement = document.getElementById('rateLimitMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (!messageElement || !submitBtn) return;
+
+        messageElement.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        const interval = setInterval(() => {
+            seconds--;
+            messageElement.textContent = `Muitas tentativas. Tente em ${seconds}s`;
+
+            if (seconds <= 0) {
+                clearInterval(interval);
+                messageElement.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        }, 1000);
+    }
+
+    // 🔐 LOGIN
+    const loginForm = document.getElementById('loginForm');
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+
+                    // 🔥 boa prática: validar token salvando
+                    if (!data.token) {
+                        throw new Error('Token não recebido');
+                    }
+
+                    window.location.href = 'index.html';
+                }
+                else if (response.status === 429) {
+                    startCountdown(data.retryAfter || 60);
+                }
+                else {
+                    alert(data.error || 'Erro ao logar');
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Erro no login');
+            }
+        });
+    }
+
+    // 📝 REGISTER
     const registerForm = document.getElementById('registerForm');
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const API_BASE = window.location.origin;
+
             try {
                 const response = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
                 });
+
                 const data = await response.json();
+
                 if (response.ok) {
-                    alert('Cadastro realizado com sucesso!');
+                    alert('Cadastro realizado!');
                     window.location.href = 'login.html';
                 } else {
                     alert(data.error);
                 }
             } catch (err) {
-                console.error('Erro ao cadastrar:', err);
-                alert('Erro ao cadastrar');
+                console.error(err);
+                alert('Erro no cadastro');
             }
         });
     }
 
+    // 🚪 LOGOUT
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('user');
-            window.location.href = 'login.html';
-        });
+        logoutBtn.addEventListener('click', logout);
     }
-    
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+    }
 });
 
+// 👁️ Toggle senha
 function togglePassword(inputId) {
     const input = document.getElementById(inputId);
-    const icon = document.getElementById(`eye-icon-${inputId}`);
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = `
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-            <line x1="1" y1="1" x2="23" y2="23"></line>
-        `;
-    } else {
-        input.type = 'password';
-        icon.innerHTML = `
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-        `;
-    }
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
 }
 
+// 📊 Relatório
 async function atualizarRelatorio() {
-    const user = JSON.parse(localStorage.getItem('user'));
     const API_BASE = window.location.origin;
-    try {
-        const response = await fetch(`${API_BASE}/escalas?user_id=${user.id}`);
-        const escalas = await response.json();
-        if (response.ok) {
-            let escaladoCount = 0;
-            let presencaCount = 0;
-            let valorEstimado = 0;
-            let valorReal = 0;
+    const token = localStorage.getItem('token');
 
-            escalas.forEach(escala => {
-                if (escala.status === 'escalado') {
-                    escaladoCount++;
-                    valorEstimado += 150;
-                } else if (escala.status === 'foi') {
-                    presencaCount++;
-                    valorReal += 150;
+    try {
+        const response = await fetch(`${API_BASE}/escalas`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const escalas = await response.json();
+
+        if (response.ok) {
+            let escalado = 0;
+            let foi = 0;
+            let estimado = 0;
+            let real = 0;
+
+            escalas.forEach(e => {
+                const status = (e.status || '').toLowerCase();
+
+                if (status === 'escalado') {
+                    escalado++;
+                    estimado += 150; // valor fixo
+                } else if (status === 'foi') {
+                    foi++;
+                    real += 150; // valor fixo
                 }
             });
 
-            document.getElementById('escalasCount').textContent = `Escalado: ${escaladoCount}`;
-            document.getElementById('valorEstimado').textContent = valorEstimado.toFixed(2);
-            document.getElementById('baladasCount').textContent = `Baladas Concluídas: ${presencaCount}`;
-            document.getElementById('valorReal').textContent = valorReal.toFixed(2);
+            document.getElementById('escalasCount').textContent = `Escalado: ${escalado}`;
+            document.getElementById('baladasCount').textContent = `Baladas: ${foi}`;
+            document.getElementById('valorEstimado').textContent = estimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('valorReal').textContent = real.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
     } catch (err) {
-        console.error('Erro ao atualizar relatório:', err);
+        console.error(err);
     }
 }
 
-// Modal de dados pessoais
+// 👤 Modal usuário
 const openUserModal = document.getElementById('openUserModal');
 const userModal = document.getElementById('userModal');
 const closeUserModal = document.getElementById('closeUserModal');
 
 if (openUserModal && userModal && closeUserModal) {
     openUserModal.addEventListener('click', async () => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const userId = user.id;
         const API_BASE = window.location.origin;
+        const token = localStorage.getItem('token');
+
         try {
-            const response = await fetch(`${API_BASE}/user/${userId}`);
-            const userData = await response.json();
+            const response = await fetch(`${API_BASE}/auth/user`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const user = await response.json();
+            console.log("Dados do usuário", user);
             if (response.ok) {
-                console.log('Dados do usuário:', userData); // Adiciona log para depuração
-                document.getElementById('modalName').value = userData.name || 'Não informado';
-                document.getElementById('modalEmail').value = userData.email || 'Não informado';
-                document.getElementById('modalCpf').value = userData.cpf || 'Não informado';
+                document.getElementById('modalName').value = user.name || '';
+                document.getElementById('modalEmail').value = user.email || '';
+                document.getElementById('modalCpf').value = user.cpf || '';
+
                 userModal.classList.remove('hidden');
                 document.body.classList.add('overflow-hidden');
             } else {
-                alert(userData.error || 'Erro ao carregar os dados');
+                alert(user.error);
             }
         } catch (err) {
-            console.error('Erro ao buscar dados do usuário:', err);
-            alert('Erro ao buscar dados do usuário');
+            console.error(err);
+            alert('Erro ao carregar usuário');
         }
     });
 
