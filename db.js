@@ -1,19 +1,21 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { Pool } = require('pg');
 
-const db = new sqlite3.Database(
-    path.resolve(__dirname, 'database.sqlite'),
-    (err) => {
-        if (err) {
-            console.error('Erro ao conectar:', err);
-        } else {
-            console.log('Banco conectado');
-        }
+// 🔗 conexão com PostgreSQL (Render usa DATABASE_URL)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // obrigatório no Render
     }
-);
+});
 
-// 🔥 boas práticas
-db.run('PRAGMA foreign_keys = ON');
-db.run('PRAGMA journal_mode = WAL');
+// teste de conexão (opcional, mas útil)
+pool.connect()
+    .then(client => {
+        console.log('🐘 PostgreSQL conectado');
+        client.release();
+    })
+    .catch(err => {
+        console.error('Erro ao conectar no PostgreSQL:', err);
+    });
 
-module.exports = db;
+module.exports = pool;

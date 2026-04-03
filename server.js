@@ -6,14 +6,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const db = require('./db'); // 🔗 SQLite
+const db = require('./db'); // 🐘 PostgreSQL
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 // =========================
-// 📁 PASTA UPLOADS
+// 📁 UPLOADS
 // =========================
 const uploadDir = './uploads';
 if (!fs.existsSync(uploadDir)) {
@@ -33,29 +33,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 const SECRET = 'SEU_SEGREDO_SUPER_FORTE';
 
 // =========================
-// 🧱 CRIAR TABELAS SQLITE
+// 🧱 CRIAR TABELAS
 // =========================
-db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            cpf TEXT UNIQUE NOT NULL
-        )
-    `);
+(async () => {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                cpf TEXT UNIQUE NOT NULL
+            )
+        `);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS escalas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            status TEXT,
-            foto TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    `);
-});
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS escalas (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                status TEXT,
+                data TEXT,
+                foto TEXT
+            )
+        `);
+
+        console.log('📦 Tabelas criadas/verificadas');
+    } catch (err) {
+        console.error('Erro ao criar tabelas:', err);
+    }
+})();
 
 // =========================
 // 📸 MULTER
@@ -69,7 +75,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // =========================
-// 🔐 MIDDLEWARE AUTH
+// 🔐 AUTH
 // =========================
 function auth(req, res, next) {
     const header = req.headers.authorization;
@@ -97,10 +103,8 @@ app.get('/', (req, res) => {
 });
 
 // =========================
-// 🔐 AUTH
+// 🔐 REGISTER
 // =========================
-
-// REGISTER
 app.post('/auth/register', async (req, res) => {
     const { name, email, password, cpf } = req.body;
 
@@ -111,70 +115,76 @@ app.post('/auth/register', async (req, res) => {
     try {
         const hashed = await bcrypt.hash(password, 10);
 
-        db.run(
-            `INSERT INTO users (name, email, password, cpf) VALUES (?, ?, ?, ?)`,
-            [name, email, hashed, cpf],
-            function (err) {
-                if (err) {
-                    return res.status(400).json({ error: 'Email ou CPF já existe' });
-                }
-
-                res.json({ id: this.lastID });
-            }
+        const result = await db.query(
+            `INSERT INTO users (name, email, password, cpf)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
+            [name, email, hashed, cpf]
         );
+
+        res.json({ id: result.rows[0].id });
+
+    } catch (err) {
+        res.status(400).json({ error: 'Email ou CPF já existe' });
+    }
+});
+
+// =========================
+// 🔐 LOGIN
+// =========================
+app.post('/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const result = await db.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [email]
+        );
+
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(400).json({ error: 'Usuário não encontrado' });
+        }
+
+        const valid = await bcrypt.compare(password, user.password);
+
+        if (!valid) {
+            return res.status(400).json({ error: 'Senha inválida' });
+        }
+
+        const token = jwt.sign({ id: user.id }, SECRET, {
+            expiresIn: '7d'
+        });
+
+        res.json({ token });
+
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// LOGIN
-app.post('/auth/login', async (req, res) => {
-    const { email, password } = req.body;
+// =========================
+// 👤 USER LOGADO
+// =========================
+app.get('/auth/user', auth, async (req, res) => {
+    try {
+        const result = await db.query(
+            `SELECT * FROM users WHERE id = $1`,
+            [req.user.id]
+        );
 
-    db.get(
-        `SELECT * FROM users WHERE email = ?`,
-        [email],
-        async (err, user) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
+        const user = result.rows[0];
 
-            if (!user) {
-                return res.status(400).json({ error: 'Usuário não encontrado' });
-            }
-
-            const valid = await bcrypt.compare(password, user.password);
-
-            if (!valid) {
-                return res.status(400).json({ error: 'Senha inválida' });
-            }
-
-            const token = jwt.sign({ id: user.id }, SECRET, {
-                expiresIn: '7d'
-            });
-
-            res.json({ token });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
-    );
-});
 
-// USER LOGADO
-app.get('/auth/user', auth, (req, res) => {
-    db.get(
-        `SELECT * FROM users WHERE id = ?`,
-        [req.user.id],
-        (err, user) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
+        res.json(user);
 
-            if (!user) {
-                return res.status(404).json({ error: 'Usuário não encontrado' });
-            }
-
-            res.json(user);
-        }
-    );
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // =========================
@@ -182,95 +192,120 @@ app.get('/auth/user', auth, (req, res) => {
 // =========================
 
 // LISTAR
-app.get('/escalas', auth, (req, res) => {
-    db.all(
-        `SELECT * FROM escalas WHERE user_id = ?`,
-        [req.user.id],
-        (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-        }
-    );
+app.get('/escalas', auth, async (req, res) => {
+    try {
+        const result = await db.query(
+            `SELECT * FROM escalas WHERE user_id = $1`,
+            [req.user.id]
+        );
+
+        res.json(result.rows);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // CRIAR
-app.post('/escalas', auth, (req, res) => {
+app.post('/escalas', auth, async (req, res) => {
     const { status, data } = req.body;
 
-    db.run(
-        `INSERT INTO escalas (user_id, status, data) VALUES (?, ?, ?)`,
-        [req.user.id, status, data],
-        function (err) {
-            if (err) return res.status(400).json({ error: err.message });
+    try {
+        const result = await db.query(
+            `INSERT INTO escalas (user_id, status, data)
+             VALUES ($1, $2, $3)
+             RETURNING id`,
+            [req.user.id, status, data]
+        );
 
-            res.json({
-                id: this.lastID,
-                user_id: req.user.id,
-                status,
-                data
-            });
-        }
-    );
+        res.json({
+            id: result.rows[0].id,
+            user_id: req.user.id,
+            status,
+            data
+        });
+
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// Atualiza status de uma escala
-app.put('/escalas/:id', auth, (req, res) => { // 🔑 adiciona auth
+// UPDATE
+app.put('/escalas/:id', auth, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const sql = `UPDATE escalas SET status = ? WHERE id = ? AND user_id = ?`;
-    db.run(sql, [status, id, req.user.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        const result = await db.query(
+            `UPDATE escalas
+             SET status = $1
+             WHERE id = $2 AND user_id = $3`,
+            [status, id, req.user.id]
+        );
 
-        if (this.changes === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Escala não encontrada' });
         }
 
         res.json({ id, status });
-    });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Deletar escala
-app.delete('/escalas/:id', auth, (req, res) => { // 🔑 adiciona auth
+// DELETE
+app.delete('/escalas/:id', auth, async (req, res) => {
     const { id } = req.params;
 
-    const sql = `DELETE FROM escalas WHERE id = ? AND user_id = ?`;
-    db.run(sql, [id, req.user.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        const result = await db.query(
+            `DELETE FROM escalas WHERE id = $1 AND user_id = $2`,
+            [id, req.user.id]
+        );
 
-        if (this.changes === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Escala não encontrada' });
         }
 
         res.json({ message: 'Escala deletada', id });
-    });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // UPLOAD FOTO
-app.post('/escalas/:id/foto', auth, upload.single('foto'), (req, res) => {
+app.post('/escalas/:id/foto', auth, upload.single('foto'), async (req, res) => {
     const { id } = req.params;
 
-    db.run(
-        `UPDATE escalas SET foto = ? WHERE id = ? AND user_id = ?`,
-        [`/uploads/${req.file.filename}`, id, req.user.id],
-        function (err) {
-            if (err) return res.status(400).json({ error: err.message });
+    try {
+        const result = await db.query(
+            `UPDATE escalas
+             SET foto = $1
+             WHERE id = $2 AND user_id = $3`,
+            [`/uploads/${req.file.filename}`, id, req.user.id]
+        );
 
-            if (this.changes === 0) {
-                return res.status(404).json({ error: 'Escala não encontrada' });
-            }
-
-            res.json({
-                message: 'Foto enviada',
-                foto: `/uploads/${req.file.filename}`
-            });
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Escala não encontrada' });
         }
-    );
+
+        res.json({
+            message: 'Foto enviada',
+            foto: `/uploads/${req.file.filename}`
+        });
+
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // =========================
 // 🚀 START
 // =========================
-app.listen(3000, () => {
-    console.log('🔥 http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`🔥 Rodando na porta ${PORT}`);
 });
