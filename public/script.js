@@ -8,16 +8,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 🔧 Helper para requisições autenticadas
-    function authFetch(url, options = {}) {
-        return fetch(url, {
+    async function fetchAuth(url, options = {}) {
+        const isFormData = options.body instanceof FormData;
+
+        const response = await fetch(url, {
             ...options,
             headers: {
                 ...(options.headers || {}),
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                ...(isFormData ? {} : { "Content-Type": "application/json" }),
+            },
         });
+
+        if (response.status === 401 || response.status === 403) {
+            alert("Sessão expirada. Faça login novamente.");
+            localStorage.removeItem("token");
+            window.location.href = "login.html";
+            return;
+        }
+
+        return response;
     }
 
     // 🧠 Carregar dados iniciais
@@ -30,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadUser() {
         try {
-            const response = await authFetch(`${API_BASE}/auth/user`);
+            const response = await fetchAuth(`${API_BASE}/auth/user`);
             const user = await response.json();
 
             if (response.ok) {
@@ -80,11 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch(`${API_BASE}/auth/login`, {
+                const response = await fetchAuth(`${API_BASE}/auth/login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({ email, password })
                 });
 
@@ -125,9 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch(`${API_BASE}/register`, {
+                const response = await fetchAuth(`${API_BASE}/register`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
                 });
 
@@ -171,9 +177,7 @@ async function atualizarRelatorio() {
     const token = localStorage.getItem('token');
 
     try {
-        const response = await fetch(`${API_BASE}/escalas`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await fetchAuth(`${API_BASE}/escalas`);
 
         const escalas = await response.json();
 
@@ -216,9 +220,7 @@ if (openUserModal && userModal && closeUserModal) {
         const token = localStorage.getItem('token');
 
         try {
-            const response = await fetch(`${API_BASE}/auth/user`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await fetchAuth(`${API_BASE}/auth/user`);
 
             const user = await response.json();
             console.log("Dados do usuário", user);
@@ -243,3 +245,4 @@ if (openUserModal && userModal && closeUserModal) {
         document.body.classList.remove('overflow-hidden');
     });
 }
+

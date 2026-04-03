@@ -83,7 +83,9 @@
       </h1>
 
       <!-- Seleção de Mês -->
-      <div class="grid grid-cols-3 sm:grid-cols-4 md:flex flex-wrap justify-center gap-2 mb-4">
+      <div
+        class="grid grid-cols-3 sm:grid-cols-4 md:flex flex-wrap justify-center gap-2 mb-4"
+      >
         <button
           data-month="0"
           class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
@@ -212,7 +214,9 @@
       id="userModal"
       class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center"
     >
-      <div class="bg-gray-900 p-6 rounded-2xl shadow-lg max-w-md w-[90%] sm:w-full text-white mx-auto">
+      <div
+        class="bg-gray-900 p-6 rounded-2xl shadow-lg max-w-md w-[90%] sm:w-full text-white mx-auto"
+      >
         <h2 class="text-xl font-semibold mb-4 text-center">Dados Pessoais</h2>
         <div class="space-y-4">
           <div>
@@ -300,19 +304,53 @@
 
       let currentDate = new Date();
       let escalas;
+
+      // 🔥 COLOQUE AQUI
+      let timeout;
+
+      function resetInactivityTimer() {
+        clearTimeout(timeout);
+
+        timeout = setTimeout(
+          () => {
+            alert("Sessão expirada por inatividade.");
+            localStorage.removeItem("token");
+            window.location.href = "login.html";
+          },
+          10 * 60 * 1000,
+        ); // 10 minutos
+      }
+
+      // Eventos que resetam
+      ["click", "mousemove", "keydown", "scroll", "touchstart"].forEach(
+        (event) => {
+          document.addEventListener(event, resetInactivityTimer);
+        },
+      );
       function getToken() {
         return localStorage.getItem("token");
       }
 
-      function authHeader(isFormData = false) {
-        const headers = {};
+      async function fetchAuth(url, options = {}) {
+        const isFormData = options.body instanceof FormData;
 
-        if (!isFormData) {
-          headers["Content-Type"] = "application/json";
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          alert("Sessão expirada. Faça login novamente.");
+          localStorage.removeItem("token");
+          window.location.href = "login.html";
+          return;
         }
 
-        headers["Authorization"] = `Bearer ${getToken()}`;
-        return headers;
+        return response;
       }
 
       const API_URL = window.location.origin;
@@ -326,9 +364,7 @@
       // Carrega escalas do backend
       async function loadEscalas() {
         try {
-          const response = await fetch(`${API_URL}/escalas`, {
-            headers: authHeader(),
-          });
+          const response = await fetchAuth(`${API_URL}/escalas`);
           if (!response.ok) throw new Error("Erro ao carregar escalas");
           escalas = await response.json();
           console.log("Escalas atualizadas:", escalas);
@@ -492,10 +528,9 @@
       // Salva nova escala
       async function saveEscala(date, status) {
         try {
-          const response = await fetch(`${API_URL}/escalas`, {
+          const response = await fetchAuth(`${API_URL}/escalas`, {
             method: "POST",
             body: JSON.stringify({ data: date, status }),
-            headers: authHeader(),
           });
           if (!response.ok) throw new Error("Erro ao salvar escala");
           closeModal();
@@ -512,10 +547,9 @@
       // Marca como faltou
       async function markAsFaltou(id) {
         try {
-          const response = await fetch(`${API_URL}/escalas/${id}`, {
+          const response = await fetchAuth(`${API_URL}/escalas/${id}`, {
             method: "PUT",
-            body: JSON.stringify({ status: "faltou" }),
-            headers: authHeader(),
+            body: JSON.stringify({ status: "faltou" })
           });
           if (!response.ok) throw new Error("Erro ao marcar como faltou");
           closeModal();
@@ -550,20 +584,19 @@
         const formData = new FormData();
         formData.append("foto", fileInput.files[0]);
         try {
-          const uploadResponse = await fetch(`${API_URL}/escalas/${id}/foto`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${getToken()}`,
+          const uploadResponse = await fetchAuth(
+            `${API_URL}/escalas/${id}/foto`,
+            {
+              method: "POST",
+              body: formData,
             },
-            body: formData,
-          });
+          );
 
           if (!uploadResponse.ok) throw new Error("Erro ao enviar foto");
 
           // depois atualiza status
-          await fetch(`${API_URL}/escalas/${id}`, {
+          await fetchAuth(`${API_URL}/escalas/${id}`, {
             method: "PUT",
-            headers: authHeader(),
             body: JSON.stringify({ status: "foi" }),
           });
 
@@ -589,11 +622,8 @@
         formData.append("foto", fileInput.files[0]);
 
         try {
-          const response = await fetch(`${API_URL}/escalas/${id}/foto`, {
+          const response = await fetchAuth(`${API_URL}/escalas/${id}/foto`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
             body: formData,
           });
 
@@ -611,9 +641,8 @@
       async function deleteEscala(id) {
         if (!confirm("Tem certeza que deseja excluir esta escala?")) return;
         try {
-          const response = await fetch(`${API_URL}/escalas/${id}`, {
-            method: "DELETE",
-            headers: authHeader(),
+          const response = await fetchAuth(`${API_URL}/escalas/${id}`, {
+            method: "DELETE"
           });
           if (!response.ok) throw new Error("Erro ao excluir escala");
           closeModal();
@@ -666,17 +695,21 @@
         }
 
         try {
-          const res = await fetch(`${API_URL}/auth/user`, {
-            headers: authHeader(),
-          });
+          const res = await fetchAuth(`${API_URL}/auth/user`);
 
-          if (!res.ok) throw new Error();
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem("token");
+            window.location.href = "login.html";
+            return;
+          }
 
           const user = await res.json();
 
           document.getElementById("userName").textContent = user.name;
 
           await loadEscalas();
+          // 🔥 INICIA AQUI
+          resetInactivityTimer();
         } catch (err) {
           console.error("Erro ao validar token");
           localStorage.removeItem("token");

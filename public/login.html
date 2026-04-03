@@ -20,7 +20,9 @@
       <h1 class="text-xl text-center select-none">Controle de Escalas</h1>
     </header>
     <div class="flex items-center justify-center min-h-screen px-4">
-      <div class="bg-gray-900 p-4 sm:p-6 rounded shadow-lg max-w-md w-full mx-2">
+      <div
+        class="bg-gray-900 p-4 sm:p-6 rounded shadow-lg max-w-md w-full mx-2"
+      >
         <h2 class="text-2xl font-semibold mb-4 text-center select-none">
           Login
         </h2>
@@ -91,6 +93,28 @@
     </div>
 
     <script>
+      async function fetchAuth(url, options = {}) {
+        const isFormData = options.body instanceof FormData;
+
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          alert("Sessão expirada. Faça login novamente.");
+          localStorage.removeItem("token");
+          window.location.href = "login.html";
+          return;
+        }
+
+        return response;
+      }
+
       function validarEmail() {
         const email = emailInput.value;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -157,11 +181,8 @@
           const API_BASE = window.location.origin;
 
           try {
-            const response = await fetch(`${API_BASE}/auth/login`, {
+            const response = await fetchAuth(`${API_BASE}/auth/login`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
               body: JSON.stringify({ email, password }),
             });
 
