@@ -67,7 +67,7 @@
   </head>
   <body class="bg-black text-white">
     <header
-      class="bg-gray-800 text-white p-4 flex justify-between items-center"
+      class="bg-gray-800 text-white p-4 flex flex-col md:flex-row justify-between items-center gap-2"
     >
       <h1 class="text-xl">Controle de Escalas</h1>
       <div>
@@ -83,7 +83,7 @@
       </h1>
 
       <!-- Seleção de Mês -->
-      <div class="flex flex-wrap justify-center gap-2 mb-4">
+      <div class="grid grid-cols-3 sm:grid-cols-4 md:flex flex-wrap justify-center gap-2 mb-4">
         <button
           data-month="0"
           class="month-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded"
@@ -212,7 +212,7 @@
       id="userModal"
       class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center"
     >
-      <div class="bg-gray-900 p-6 rounded shadow-lg max-w-md w-full text-white">
+      <div class="bg-gray-900 p-6 rounded-2xl shadow-lg max-w-md w-[90%] sm:w-full text-white mx-auto">
         <h2 class="text-xl font-semibold mb-4 text-center">Dados Pessoais</h2>
         <div class="space-y-4">
           <div>
